@@ -41,12 +41,55 @@ def homepage():
         f'<center>/api/v1.0/tobs</center>'
         f'<center>/api/v1.0/[start]</center>'
         f'<center>/api/v1.0/[start]/[end]</center>'
-        )
+    )
 
 # Precipritation route
 @app.route('/api/v1.0/precipitation')
-def precipritation():
+def precipitation():
+    # jsonify last year's precipitation
+    OneYearDeltaDate = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
-# Launches it so I can see results of imported routes
+    # Perform a query to retrieve the data and precipitation scores
+    PrecipData = session.query(MeasurementTable.date, MeasurementTable.prcp).\
+        filter(MeasurementTable.date >= OneYearDeltaDate).all()
+
+    session.close()
+    # Create a dictionary
+    precip = {date: prcp for date, prcp in PrecipData}
+    return jsonify(precip)
+
+# Stations route
+@app.route('/api/v1.0/stations')
+def stations():
+    # Perform a query to retrieve station names
+    StationNames = session.query(StationTable.station).all()
+    session.close()
+
+    Stations = list(np.ravel(StationNames))
+    return jsonify(Stations)
+
+# TOBS route
+@app.route('/api/v1.0/tobs')
+def tobs():
+    # One year prior to latest date
+    OneYearDeltaDate = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+
+    # Query temperatures over the last year
+    TwelveMosTemps = session.query(MeasurementTable.date, MeasurementTable.tobs).\
+    filter(MeasurementTable.date >= OneYearDeltaDate).\
+    filter(MeasurementTable.station == 'USC00519281').all()
+
+    session.close()
+
+    Temperatures = list(np.ravel(TwelveMosTemps))
+    return jsonify(Temperatures)
+
+# Start / End route
+@app.route('/api/v1.0/<start>')
+@app.route('/api/v1.0/<start>/<end>')
+def dates(start = None, end = None):
+
+    select = [func.min(MeasurementTable.tobs), func.max(MeasurementTable.tobs), func.avg(MeasurementTable.tobs)]
+
 if __name__ == '__main__':
     app.run(debug=True)
